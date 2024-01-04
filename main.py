@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-MODEL = "model.pkl"
+MODEL = "model2.pkl"
 SCALER = StandardScaler()
 MINMAX = MinMaxScaler()
 
