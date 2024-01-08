@@ -2,22 +2,26 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from preprocessor import num_scaler
 
 MODEL = "model2.pkl"
-SCALER = StandardScaler()
-MINMAX = MinMaxScaler()
 
-st.title("Loan Approval Prediction App")
-st.write("This app predicts **Loan Approval** using **Machine Learning**")
-
-
+# Load the model once outside the functions
+with open(MODEL, "rb") as f:
+    model = pickle.load(f)
 
 def input_form():
     with st.form("loan_form"):
         st.markdown("### Personal Information")
         st.write("Let's start with some personal details")
         name = st.text_input("Name")
+        email = st.text_input("Email to receive your loan status")
         dependants = st.slider("Number of dependants", min_value=0, max_value=15, value=0, step=1)
         employment = st.selectbox("Are you self employed?", ["Yes", "No"])
         income = st.number_input("Yearly Income", min_value=0, value=0, step=100)
@@ -43,52 +47,88 @@ def input_form():
         submit = st.form_submit_button("Submit")
 
     if submit:
-        if any([name == "", dependants == 0, employment == "", income == 0, education == "",
+        if any([name == "",email == "", dependants == 0, employment == "", income == 0, education == "",
                 residence == 0, commercial == 0, loan_amount == 0, loan_term == 0, credit_score == 0, bank == 0]):
             st.warning("Please fill all the fields")
             return None
-        
+        st.session_state['name'] = name
+        st.session_state['email'] = email
         data = [dependants, education, employment, income, loan_amount, loan_term, credit_score, residence, commercial, luxery, bank]
-        # numerical = [dependants, income, residence, commercial, loan_amount, loan_term, credit_score, luxery, bank]
-        # min_max = [dependants, loan_term]
-        # categorical = [employment, education]
+        
         return data
+def preprocess(data):
+    # Use the appropriate column names based on the model training data
+    column_names = ['no_of_dependents', 'education', 'self_employed', 'income_annum',
+                     'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value',
+                     'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
+    
+    column_names_ = ['no_of_dependents', 'income_annum',
+                     'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value',
+                     'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
+    
+    data_mapping = {"Yes": 1, "No": 0, "Graduate": 0, "Not Graduate": 1}   
+    for i in [2, 1]:
+        data[i] = data_mapping.get(data[i], data[i])
 
-#function for form data preprocessing
-# def preprocess(data):
-#     numerical, categorical, min_max = data
-#     numerical_2d = np.array(numerical).reshape(1, -1)
-#     numerical_scaled = SCALER.fit_transform(numerical_2d)
-#     numerical_rounded = np.round(numerical_scaled[0], 2)
-#     return numerical_rounded
+
+    df = pd.DataFrame(np.array(data).reshape(1, -1), columns=column_names)
+    df[column_names_] = num_scaler.transform(df[column_names_])
+
+    return df
 
 def predict(data):
-    data_mapping = {"Yes": 1, "No": 0, "Graduate": 1, "Not Graduate": 0}
-    print(data)
-    data[2] = data_mapping.get(data[2], data[2])
-    data[1] = data_mapping.get(data[1], data[1])
-    df = pd.DataFrame(np.array(data).reshape(1, -1), columns=['no_of_dependents', 'education', 'self_employed', 'income_annum',
-       'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value',
-       'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value'])
-    print(df)
-    with open(MODEL, "rb") as f:
-
-        model = pickle.load(f)
-    prediction = model.predict(df)
-    predictio_map = {1: "Approved", 0: "Rejected"}
-    prediction = predictio_map.get(prediction[0], prediction[0])
+    scaler_data = preprocess(data)
+    
+    # Use the model to make predictions
+    prediction = model.predict(scaler_data)
+        
     return prediction
+
+def smtp_mail(prediction):
+    
+    email_sender = 'ngechamike26@gmail.com'
+    email_receiver = st.session_state['email']
+    subject = 'Loan Application Status'
+    body = 'Dear '+st.session_state['name']+',\n\nYour loan application has been ' + prediction + '.\n\nRegards,\n\nLoan Application Team'
+    password = 'vvct jwfp kjlq mdvq' 
+
+
+    try:
+        msg = MIMEText(body)
+        msg['From'] = email_sender
+        msg['To'] = email_receiver
+        msg['Subject'] = subject
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(email_sender, password)
+        server.sendmail(email_sender, email_receiver, msg.as_string())
+        server.quit()
+
+        st.success('Email sent successfully! 🚀')
+    except Exception as e:
+        st.error(f"Error sending email : {e}")
+
+
 
 def main():
     st.write("You are here to find out if you are eligible for a loan")
     st.write("Please fill the form below")
     data = input_form()
+    # st.write(data)
     if data is not None:
-        st.write("Form submitted successfully!")
-        st.write("Numerical Data:", data)
-        st.write("Categorical Data:", data[1])
-        st.write("prediction:", predict(data))
+        st.success("Form submitted successfully!")
+        # st.write("Input Data:", data)
+        prediction = predict(data)
+        if prediction == 0:
+            
+            st.write(f"Dear {st.session_state['name']}:  Congratulations, your loan Application has been Aprroved")
+            smtp_mail("Approved")
+        else:
+            st.write(f"Dear {st.session_state['name']}:  Sorry, your loan Application has been Rejected")
+            smtp_mail("Rejected")
+        
 
 if __name__ == "__main__":
     main()
-  
+
