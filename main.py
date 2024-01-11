@@ -41,7 +41,7 @@ def input_form():
         st.write("Now let's talk about the loan")
         loan_amount = st.number_input("How much are you looking for?", min_value=0, value=0, step=100)
         loan_term = st.select_slider("Loan Term (in Month)", options=[12, 36, 60, 84, 120, 180, 240, 300, 360, 480])
-        credit_score = st.number_input("Credit Score", min_value=0, max_value=1000, value=0, step=1)
+        credit_score = st.selectbox("Credit Score", ["Good","Poor"])
         st.markdown("---------")
 
         submit = st.form_submit_button("Submit")
@@ -53,7 +53,7 @@ def input_form():
             return None
         if dependants > 3:
             dependants = '3+'
-
+       
        
         st.session_state['name'] = name
         st.session_state['email'] = email
@@ -74,7 +74,8 @@ def preprocess(data):
         df[i] = df[i].astype(float)
         df[i] = df[i]/1000
 
-    
+    credit_score_mapping = {"Good": 1, "Poor": 0}
+    df['Credit_History'] = credit_score_mapping.get(df['Credit_History'].values[0], df['Credit_History'].values[0])
 
     df[column_names_] = num_scaler.transform(df[column_names_])
     df[min_max_cols] = minmax_scaler.transform(df[min_max_cols])
