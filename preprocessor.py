@@ -1,20 +1,33 @@
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder
 import pandas as pd
+import streamlit as st
 
 
 # Load the data once outside the functions
-DATA = "Data/loan_approval_dataset.csv"
+DATA = "Data/new/loan-train.csv"
 df = pd.read_csv(DATA)
+# st.dataframe(df.head())
 
-column_names_ = ['no_of_dependents', 'income_annum',
-                     'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value',
-                     'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
+df['Dependents'].astype(str)
 
-df.rename(columns=lambda x: x.strip(), inplace=True)
+column_names_ = ['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount']
+min_max_cols = ['Loan_Amount_Term']
+Label_cols = ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area', 'Dependents']
+
 column_names =  df.columns[1:-1]
-
+# st.write(column_names)
 # Create an instance of StandardScaler
 scaler = StandardScaler()
+minax = MinMaxScaler()
+label_encoders={}
+
+
+
    
 num_scaler = scaler.fit(df[column_names_])
+minmax_scaler = minax.fit(df[min_max_cols])
+for i in Label_cols:
+    encoders = LabelEncoder().fit(df[i])
+    label_encoders[i] = encoders    
 
+# st.write("label_encoders: ", label_encoders)

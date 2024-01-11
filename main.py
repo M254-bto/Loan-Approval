@@ -8,39 +8,39 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from preprocessor import num_scaler
+from preprocessor import num_scaler, minmax_scaler, label_encoders, column_names, column_names_, min_max_cols, Label_cols
 
-MODEL = "model2.pkl"
+MODEL = "loan_classifier_rf.pkl"
 
 # Load the model once outside the functions
 with open(MODEL, "rb") as f:
     model = pickle.load(f)
 
 def input_form():
+    # col1, col2 = st.columns(2)
+
     with st.form("loan_form"):
+        
         st.markdown("### Personal Information")
         st.write("Let's start with some personal details")
         name = st.text_input("Name")
+        gender = st.selectbox("Select your Gender", ['Male', 'Female'])
         email = st.text_input("Email to receive your loan status")
         dependants = st.slider("Number of dependants", min_value=0, max_value=15, value=0, step=1)
         employment = st.selectbox("Are you self employed?", ["Yes", "No"])
         income = st.number_input("Yearly Income", min_value=0, value=0, step=100)
+        co_income = st.number_input("Co-Applicant's Yearly Income (if no co-applicant, leave at 0)", min_value=0, value=0, step=100)
         education = st.selectbox("Education", ["Graduate", "Not Graduate"])
+        married = st.selectbox("Are you married?", ["Yes", "No"])
+        property_area = st.selectbox("Property Area", ["Urban", "Semiurban", "Rural"])
 
-        st.markdown("---------")
 
-        st.markdown("### Assets Information") 
-        st.write("Now let's talk about your assets")
-        residence = st.number_input("Total value of residential property", min_value=0, value=0, step=100)
-        commercial = st.number_input("Total value of commercial property", min_value=0, value=0, step=100)
-        luxery = st.number_input("Total value of luxery property", min_value=0, value=0, step=100)
-        bank = st.number_input("Total value of Assets in the Bank", min_value=0, value=0, step=100)
-
+        
         st.markdown("---------")
         st.markdown("### Loan Information")
         st.write("Now let's talk about the loan")
         loan_amount = st.number_input("How much are you looking for?", min_value=0, value=0, step=100)
-        loan_term = st.number_input("In how many years do you want to pay it?", min_value=0, max_value=30, value=0, step=1)
+        loan_term = st.select_slider("Loan Term (in Month)", options=[12, 36, 60, 84, 120, 180, 240, 300, 360, 480])
         credit_score = st.number_input("Credit Score", min_value=0, max_value=1000, value=0, step=1)
         st.markdown("---------")
 
@@ -48,31 +48,39 @@ def input_form():
 
     if submit:
         if any([name == "",email == "", dependants == 0, employment == "", income == 0, education == "",
-                residence == 0, commercial == 0, loan_amount == 0, loan_term == 0, credit_score == 0, bank == 0]):
+                 loan_amount == 0, loan_term == 0,]):
             st.warning("Please fill all the fields")
             return None
+        if dependants > 3:
+            dependants = '3+'
+
+       
         st.session_state['name'] = name
         st.session_state['email'] = email
-        data = [dependants, education, employment, income, loan_amount, loan_term, credit_score, residence, commercial, luxery, bank]
+        data = [gender, married, dependants, education, employment, income, co_income, loan_amount, loan_term, credit_score, property_area]
         
         return data
 def preprocess(data):
     # Use the appropriate column names based on the model training data
-    column_names = ['no_of_dependents', 'education', 'self_employed', 'income_annum',
-                     'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value',
-                     'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
     
-    column_names_ = ['no_of_dependents', 'income_annum',
-                     'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value',
-                     'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
-    
-    data_mapping = {"Yes": 1, "No": 0, "Graduate": 0, "Not Graduate": 1}   
-    for i in [2, 1]:
-        data[i] = data_mapping.get(data[i], data[i])
+    # data_mapping = {"Yes": 1, "No": 0, "Graduate": 0, "Not Graduate": 1}   
+    # for i in [2, 1]:
+    #     data[i] = data_mapping.get(data[i], data[i])
 
 
     df = pd.DataFrame(np.array(data).reshape(1, -1), columns=column_names)
+    df['Dependents'] = df['Dependents'].astype(object)
+    for i in ['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount']:
+        df[i] = df[i].astype(float)
+        df[i] = df[i]/1000
+
+    
+
     df[column_names_] = num_scaler.transform(df[column_names_])
+    df[min_max_cols] = minmax_scaler.transform(df[min_max_cols])
+    for i in Label_cols:
+        df[i] = label_encoders[i].transform(df[i])
+
 
     return df
 
@@ -120,7 +128,8 @@ def main():
         st.success("Form submitted successfully!")
         # st.write("Input Data:", data)
         prediction = predict(data)
-        if prediction == 0:
+        # st.write(prediction)
+        if prediction == 1:
             
             st.write(f"Dear {st.session_state['name']}:  Congratulations, your loan Application has been Aprroved")
             smtp_mail("Approved")
