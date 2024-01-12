@@ -4,7 +4,7 @@ import streamlit as st
 
 
 # Load the data once outside the functions
-DATA = "Data/new/loan-train.csv"
+DATA = "Data/loan-train.csv"
 df = pd.read_csv(DATA)
 # st.dataframe(df.head())
 

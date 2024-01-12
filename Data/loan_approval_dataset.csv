@@ -1,0 +1,17 @@
+The user interface is good, employing clear color distinctions which not only enhance visual appeal but also helps in intuitive navigation for users. The use of relatable symbols further facilitate recognition, reducing the cognitive load associated with recall
+
+
+user experience
+
+While the user Interface is good, the UX leaves some gaps to be addressed. 
+1. The splash screen,
+	This screen is the introduction to the app, While it displays, the app works in the background to get the users session details and render the home page. as it is, the app displays login screen, then after processing the user session, it goes to an incomplete home page then renders it all fully after some time. This doesn't help with the user experience
+	
+2. Space between list data entries.
+	in sales, seasons and general expenses where the user will need to select individual entries, the space between them should be enough to reduce the chances of the user selecting other entries rather than the intended one. The unpaid invoices in the home page is a good example of a well outlayed list data.
+	
+3. Loading Time
+	Views, especially those that involve rendering data take time to load. switching from one view to the other also takes alot of time. this leaves the most significant gap in the general user experience
+	
+4. Functional elements.
+	The reports and and files buttons on the bottom Nav are not functional as originally intended, they should triger thair respective views, instead, they redirect to the drawer menu. 
