@@ -51,8 +51,10 @@ def input_form():
                  loan_amount == 0, loan_term == 0,]):
             st.warning("Please fill all the fields")
             return None
-        if dependants > 3:
+        if dependants >= 3:
             dependants = '3+'
+        else:
+            dependants = str(dependants)
        
        
         st.session_state['name'] = name
