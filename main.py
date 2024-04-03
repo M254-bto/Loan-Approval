@@ -47,7 +47,7 @@ def input_form():
         submit = st.form_submit_button("Submit")
 
     if submit:
-        if any([name == "",email == "", dependants == 0, employment == "", income == 0, education == "",
+        if any([name == "",email == "", employment == "", income == 0, education == "",
                  loan_amount == 0, loan_term == 0,]):
             st.warning("Please fill all the fields")
             return None
